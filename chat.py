@@ -114,17 +114,28 @@ class Chat:
 
         
     def _get_msg_self_sent(self, message : Message) -> ft.Row:
-        row = ft.Row([ft.Text(message.message, color=ft.colors.BLACK87), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
+        row = ft.Row([ft.Text(message.message, color=ft.colors.BLACK87),ft.Text(f": {self.name}", color=ft.colors.BLACK87), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
 
-        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.ORANGE_300)
+        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.ORANGE_400, shadow=ft.BoxShadow(
+            spread_radius=1,
+            blur_radius=0,
+            color=ft.colors.BLUE_GREY_300,
+            offset=ft.Offset(0, 0),
+            blur_style=ft.ShadowBlurStyle.OUTER,
+        ))
 
         return container 
     
     def _get_msg_other_sent(self, message : Message) -> ft.Row:
-
-
-        row = ft.Row([ft.Text(message.srcName, color=ft.colors.BLACK87), ft.Text(message.message,  color=ft.colors.BLACK87) , ft.Text(message.time)], spacing=10)
-        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.BLUE_200)
+        
+        row = ft.Row([ft.Text(message.time), ft.Text(f"{message.srcName}:", color=ft.colors.BLACK87), ft.Text(message.message,  color=ft.colors.BLACK87) ], spacing=10)
+        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.BLUE_200, shadow=ft.BoxShadow(
+            spread_radius=1,
+            blur_radius=0,
+            color=ft.colors.BLUE_GREY_300,
+            offset=ft.Offset(0, 0),
+            blur_style=ft.ShadowBlurStyle.OUTER,
+        ))
 
         return container
 
