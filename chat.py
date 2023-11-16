@@ -70,7 +70,7 @@ class SerialController:
             except Empty:
                 pass
             else:
-                self._send_to_serial(data)
+                self._send_send_to_serial(data)
             try:
                 data = self._receive_from_serial()
             except Empty:
@@ -100,18 +100,31 @@ class Chat:
     address = ""
     port = ""
 
+    massagesView = None
 
 
     def __init__(self) -> None:
         self.serialCtl = SerialController()
 
-        self.mockMassages = []
+
+        self.massagesView =  ft.ListView(
+            expand=True,
+            spacing=10,
+            auto_scroll=True)
 
         fake = Faker()
-        for _ in range(100):
+        for _ in range(1):
             random_message = fake.text()
             random_name = fake.name()
-            self.mockMassages.append(Message(random_message, random_name))
+            self.add_message(Message(random_message, random_name))
+
+
+    def get_message_element(self, message : Message) -> ft.Row:
+        return ft.Row([ft.Text(message.srcName), ft.Text(message.message), ft.Text(message.time)], spacing=10)
+
+    def add_message(self, message : Message) -> None:
+        self.massagesView.controls.append(self.get_message_element(message))
+
 
 
     def _get_setup_view(self) -> ft.View:
@@ -133,16 +146,12 @@ class Chat:
         )
     
     def send_message(self, message : str) -> None:
-        pass
+        self.add_message(Message(message, self.name))
+        self.serialCtl.send(message)
+        self.ftPage.update()
 
     def _get_chat_view(self) -> ft.View:
-        content = []
-        
-        for message in self.mockMassages:
-            content.append(ft.Text(message.srcName))
-            content.append(ft.Text(message.message))
-            content.append(ft.Text(message.time))
-            content.append(ft.Divider())
+
 
         new_message = ft.TextField(
             hint_text="Write a message...",
@@ -152,32 +161,30 @@ class Chat:
             max_lines=5,
             filled=True,
             expand=True,
+            on_submit=lambda e : self.send_message(new_message.value),
             )
+        
+        def submit(e):
+            self.send_message(new_message.value)
+            new_message.value = ""
+            new_message.focus()
+            self.ftPage.update()
 
-        chatField = ft.Row([new_message, ft.IconButton(icon=ft.icons.SEND_ROUNDED,tooltip="Send message",on_click=lambda e : self.send_message(new_message.value),),], spacing=10)
+        chatField = ft.Row([new_message, ft.IconButton(icon=ft.icons.SEND_ROUNDED,tooltip="Send message",on_click=submit),], spacing=10)
 
-
-        massageList = ft.ListView(
-            expand=True,
-            spacing=10,
-            auto_scroll=True,
-            controls=content,
-        )
 
         view = ft.View(
             "/",
             [
                 ft.AppBar(title=ft.Text("Chat"), bgcolor=ft.colors.SURFACE_VARIANT),
                 ft.Container(
-                    content=massageList,
+                    content=self.massagesView,
                     border=ft.border.all(1, ft.colors.OUTLINE),
                     border_radius=5,
                     padding=10,
                     expand=True,
                 ),
-                chatField,
-                # ft.Container( content=ft.Column([, ], alignment=ft.MainAxisAlignment.SPACE_BETWEEN, spacing=10)),
-                
+                chatField,                
             ],
             )
         
