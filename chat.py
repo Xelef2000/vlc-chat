@@ -58,7 +58,7 @@ class SerialController:
     def _receive_from_serial(self) -> str:
         # randomly return a message 
         if random() < 0.1:
-            return "Hello"
+            return "Peter:Hello"
         else:
             return ""
 
@@ -112,20 +112,33 @@ class Chat:
             spacing=10,
             auto_scroll=True)
 
-        fake = Faker()
-        for _ in range(1):
-            random_message = fake.text()
-            random_name = fake.name()
-            self.add_message(Message(random_message, random_name))
+        
+    def _get_msg_self_sent(self, message : Message) -> ft.Row:
+        return ft.Row([ft.Text(message.message), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
+    
+    def _get_msg_other_sent(self, message : Message) -> ft.Row:
+        return ft.Row([ft.Text(message.srcName), ft.Text(message.message), ft.Text(message.time)], spacing=10)
 
 
     def get_message_element(self, message : Message) -> ft.Row:
-        return ft.Row([ft.Text(message.srcName), ft.Text(message.message), ft.Text(message.time)], spacing=10)
+        if(message.srcName == self.name):
+            return self._get_msg_self_sent(message)
+        else:
+            return self._get_msg_other_sent(message)
 
     def add_message(self, message : Message) -> None:
         self.massagesView.controls.append(self.get_message_element(message))
+        self.ftPage.update()
 
+    def _run_receive(self) -> None:
+        while True:
+            message = self.serialCtl.receive()
+            if(message != ""):
+                name = message.split(":")[0]
+                text = "".join(message.split(":")[1:])
 
+                self.ftPage.pubsub.send_all(Message(text, name))
+            sleep(0.1)
 
     def _get_setup_view(self) -> ft.View:
         portDD = ft.Dropdown( width=300,options=[ft.dropdown.Option(p) for p in self.serialCtl.get_ports()])
@@ -146,10 +159,9 @@ class Chat:
         )
     
     def send_message(self, message : str) -> None:
-        self.add_message(Message(message, self.name))
-        self.serialCtl.send(message)
-        self.ftPage.update()
-
+        self.serialCtl.send(f"{self.name}:{message}")
+        self.ftPage.pubsub.send_all(Message(message, self.name))
+        
     def _get_chat_view(self) -> ft.View:
 
 
@@ -169,6 +181,8 @@ class Chat:
             new_message.value = ""
             new_message.focus()
             self.ftPage.update()
+
+        new_message.on_submit = submit
 
         chatField = ft.Row([new_message, ft.IconButton(icon=ft.icons.SEND_ROUNDED,tooltip="Send message",on_click=submit),], spacing=10)
 
@@ -208,10 +222,18 @@ class Chat:
         page.theme_mode = ft.ThemeMode.DARK
         page.title = "VLC Chat"
         page.horizontal_alignment = "stretch"
+        page.pubsub.subscribe(self.add_message)
 
         page.on_route_change = self.route_change
         page.on_view_pop = self.view_pop
         page.go(page.route)
+
+
+        # fake = Faker()
+        # for _ in range(1):
+        #     random_message = fake.text()
+        #     random_name = fake.name()
+        #     self.add_message(Message(random_message, random_name))
 
     def view_pop(self, view : ft.View) -> None:
         self.ftPage.views.pop()
@@ -223,7 +245,7 @@ class Chat:
         bgcolor=ft.colors.RED_100,
         leading=ft.Icon(ft.icons.WARNING_AMBER_SHARP, color=ft.colors.BLACK87, size=40),
         content=ft.Text(
-            "Invalid Address, your address has been set to be between 0 and 254",
+            "Invalid Address, your address has to be set between 0 and 254",
             color=ft.colors.BLACK87,
         ),
         actions=[
@@ -254,6 +276,9 @@ class Chat:
         self.port = port
         self.serialCtl.start(port, 115200, address)
         self.ftPage.go("/chat")
+
+        self.recThread = Thread(target=self._run_receive)
+        self.recThread.start()
 
 
 
