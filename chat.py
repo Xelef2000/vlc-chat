@@ -57,7 +57,7 @@ class SerialController:
 
     def _receive_from_serial(self) -> str:
         # randomly return a message 
-        if random() < 0.1:
+        if random() < 0.05:
             return "Peter:Hello"
         else:
             return ""
@@ -114,17 +114,17 @@ class Chat:
 
         
     def _get_msg_self_sent(self, message : Message) -> ft.Row:
-        row = ft.Row([ft.Text(message.message, color=ft.colors.BLACK54), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
+        row = ft.Row([ft.Text(message.message, color=ft.colors.BLACK87), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
 
-        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.ON_SURFACE_VARIANT)
+        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.ORANGE_300)
 
         return container 
     
     def _get_msg_other_sent(self, message : Message) -> ft.Row:
 
 
-        row = ft.Row([ft.Text(message.srcName), ft.Text(message.message), ft.Text(message.time)], spacing=10)
-        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.SURFACE_VARIANT)
+        row = ft.Row([ft.Text(message.srcName, color=ft.colors.BLACK87), ft.Text(message.message,  color=ft.colors.BLACK87) , ft.Text(message.time)], spacing=10)
+        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.BLUE_200)
 
         return container
 
