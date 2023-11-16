@@ -78,7 +78,7 @@ class SerialController:
             else:
                 if(data != ""):
                     self.receive_queue.put(data)
-            sleep(random())
+            sleep(0.01)
 
 
 
@@ -114,10 +114,19 @@ class Chat:
 
         
     def _get_msg_self_sent(self, message : Message) -> ft.Row:
-        return ft.Row([ft.Text(message.message), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
+        row = ft.Row([ft.Text(message.message, color=ft.colors.BLACK54), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
+
+        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.ON_SURFACE_VARIANT)
+
+        return container 
     
     def _get_msg_other_sent(self, message : Message) -> ft.Row:
-        return ft.Row([ft.Text(message.srcName), ft.Text(message.message), ft.Text(message.time)], spacing=10)
+
+
+        row = ft.Row([ft.Text(message.srcName), ft.Text(message.message), ft.Text(message.time)], spacing=10)
+        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.SURFACE_VARIANT)
+
+        return container
 
 
     def get_message_element(self, message : Message) -> ft.Row:
@@ -275,7 +284,7 @@ class Chat:
         self.address = address
         self.port = port
         self.serialCtl.start(port, 115200, address)
-        self.ftPage.go("/chat")
+        self.ftPage.go("/no_route")
 
         self.recThread = Thread(target=self._run_receive)
         self.recThread.start()
