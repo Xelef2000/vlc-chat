@@ -128,6 +128,8 @@ class Chat:
 
     massagesView = None
 
+    
+
 
     def __init__(self) -> None:
         self.serialCtl = SerialController()
@@ -208,13 +210,22 @@ class Chat:
             sleep(0.1)
 
     def _get_setup_view(self) -> ft.View:
-        portDD = ft.Dropdown( width=300,options=[ft.dropdown.Option(p) for p in self.serialCtl.get_ports()])
+        portList = [ft.dropdown.Option(p) for p in self.serialCtl.get_ports()]
+
+        if(len(portList) == 0):
+            self.show_no_port_banner()
+            portList = [ft.dropdown.Option("No Ports Found")]
+        else:
+            self.close_banner(None)
+
+        portDD = ft.Dropdown( width=300,options=portList, value=portList[0])
         addressTF = ft.TextField(hint_text="AA", width=300)
         nameTF = ft.TextField(hint_text="", width=300)
         
         return ft.View(
             "/",
             [
+                ft.Text("Select Port"),
                 ft.AppBar(title=ft.Text("Setup"), bgcolor=ft.colors.SURFACE_VARIANT),
                 portDD,
                 ft.Text("Select Address"),
@@ -290,11 +301,15 @@ class Chat:
         page.title = "VLC Chat"
         page.horizontal_alignment = "stretch"
         page.pubsub.subscribe(self.add_message)
+        self.ftPage.banner = ft.Banner( content=ft.Text("Loading...",color=ft.colors.BLACK87),actions=[ft.TextButton("Reload", on_click=self._reload_setup)])
+        self.ftPage.banner.open = False
+
 
         page.on_route_change = self.route_change
         page.on_view_pop = self.view_pop
         page.go(page.route)
 
+        
 
         # fake = Faker()
         # for _ in range(1):
@@ -323,6 +338,43 @@ class Chat:
         self.ftPage.banner.open = True
         self.ftPage.update()
 
+    def show_invalid_port_banner(self) -> None:
+        self.ftPage.banner = ft.Banner(
+        bgcolor=ft.colors.RED_100,
+        leading=ft.Icon(ft.icons.WARNING_AMBER_SHARP, color=ft.colors.BLACK87, size=40),
+        content=ft.Text(
+            "Invalid Port, please select a port",
+            color=ft.colors.BLACK87,
+        ),
+        actions=[
+            ft.TextButton("Ok", on_click=self.close_banner),
+        ],
+        )
+        
+        self.ftPage.banner.open = True
+        self.ftPage.update()
+
+    def _reload_setup(self,e ) -> None:
+        self.ftPage.views.clear()
+        self.ftPage.views.append(self._get_setup_view())
+        self.ftPage.update()
+        
+
+    def show_no_port_banner(self) -> None:
+        self.ftPage.banner = ft.Banner(
+        bgcolor=ft.colors.RED_100,
+        leading=ft.Icon(ft.icons.WARNING_AMBER_SHARP, color=ft.colors.BLACK87, size=40),
+        content=ft.Text(
+            "No Ports Found, please connect a device",
+            color=ft.colors.BLACK87,
+        ),
+        actions=[
+            ft.TextButton("Reload", on_click=self._reload_setup),
+        ],
+        )
+        
+        self.ftPage.banner.open = True
+        self.ftPage.update()
         
     def close_banner(self, e : ft.event):
         self.ftPage.banner.open = False
@@ -334,6 +386,11 @@ class Chat:
         
         if(address == "" or int(address, 16) <= 0 or int(address, 16) > 254):
             self.show_invalid_address_banner()
+            return
+        
+
+        if(port == "" or port is None or port == "No Ports Found"):
+            self.show_invalid_port_banner()
             return
 
 
