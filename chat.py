@@ -5,6 +5,7 @@ from queue import Queue
 from queue import Empty
 import flet as ft
 import serial.tools.list_ports
+import serial
 import datetime
 from faker import Faker
 
@@ -17,6 +18,7 @@ class SerialController:
     baudRate = 115200
     address = "AB"
     running = False
+    ser = None
 
 
     def __init__(self) -> None:
@@ -30,12 +32,24 @@ class SerialController:
             print("{}: {} [{}]".format(port, desc, hwid))
         return [p.device for p in ports]
 
+    def _setup_device(self) -> None:
+        self.ser.write(str.encode(f"a[{self.address}]\n"))
+        sleep(0.1)
+        self.ser.write(str.encode("c[1,0,5]\n"))
+        sleep(0.1)
+        self.ser.write(str.encode(f"c[0,1,30]\n"))
+        sleep(0.1)
+
+
 
     def start(self, serialPort: str, baudRate: int, address: str) -> None:
         self.serialPort = serialPort
         self.baudRate = baudRate
         self.address = address
         self.running = True
+
+        self.ser = serial.Serial(port=self.serialPort, baudrate=self.baudRate, timeout=0.1)
+
         self.thread = Thread(target=self._run)
         self.thread.start()
     
@@ -54,16 +68,24 @@ class SerialController:
 
     def _send_send_to_serial(self, data: str) -> None:
         print(f"Sending {data}")
+        self.ser.write(f"m[{data},FF]\n".encode())
 
     def _receive_from_serial(self) -> str:
         # randomly return a message 
-        if random() < 0.05:
-            return "Peter:Hello"
-        else:
-            return ""
+        # if random() < 0.05:
+        #     return "Peter:Hello"
+        # else:
+        #     return ""
+        data = self.ser.readline().decode()
+        if(data != ""):
+            print(f"Received {data}")
+        return data
+    
 
 
     def _run(self) -> None:
+        sleep(2)
+        self._setup_device()
         while self.running:
             try:
                 data = self.send_queue.get(timeout=0.1)
@@ -86,11 +108,15 @@ class Message:
     message = ""
     time = ""
     srcName = ""
+    sentBySelf = False
+    sentBySystem = False
 
-    def __init__(self, message: str, srcName: str) -> None:
+    def __init__(self, message: str, srcName: str, sentBySelf: bool = False, sentBySystem: bool = False) -> None:
         self.message = message
         self.srcName = srcName
         self.time = datetime.datetime.now().strftime("%H:%M")
+        self.sentBySelf = sentBySelf
+        self.sentBySystem = sentBySystem
     
 class Chat:
     ftPage = None
@@ -111,6 +137,19 @@ class Chat:
             expand=True,
             spacing=10,
             auto_scroll=True)
+        
+    def _get_msg_system(self, message : Message) -> ft.Row:
+        row = ft.Row([ft.Text(message.time), ft.Text(message.message)], spacing=10, alignment=ft.MainAxisAlignment.CENTER)
+
+        # container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.BLUE_GREY_200, shadow=ft.BoxShadow(
+        #     spread_radius=1,
+        #     blur_radius=0,
+        #     color=ft.colors.BLUE_GREY_300,
+        #     offset=ft.Offset(0, 0),
+        #     blur_style=ft.ShadowBlurStyle.OUTER,
+        # ))
+
+        return row
 
         
     def _get_msg_self_sent(self, message : Message) -> ft.Row:
@@ -141,8 +180,10 @@ class Chat:
 
 
     def get_message_element(self, message : Message) -> ft.Row:
-        if(message.srcName == self.name):
+        if(message.sentBySelf):
             return self._get_msg_self_sent(message)
+        elif (message.sentBySystem):
+            return self._get_msg_system(message)
         else:
             return self._get_msg_other_sent(message)
 
@@ -154,10 +195,16 @@ class Chat:
         while True:
             message = self.serialCtl.receive()
             if(message != ""):
-                name = message.split(":")[0]
-                text = "".join(message.split(":")[1:])
 
-                self.ftPage.pubsub.send_all(Message(text, name))
+                split = message.split(":")
+
+                if(len(split) < 2):
+                    self.ftPage.pubsub.send_all(Message(message.rstrip(), "sys", sentBySelf=False, sentBySystem=True))
+                
+                else:
+                    name = split[0]
+                    text = ":".join(message.split(":")[1:])
+                    self.ftPage.pubsub.send_all(Message(text.rstrip(), name, sentBySelf=False))
             sleep(0.1)
 
     def _get_setup_view(self) -> ft.View:
@@ -180,7 +227,7 @@ class Chat:
     
     def send_message(self, message : str) -> None:
         self.serialCtl.send(f"{self.name}:{message}")
-        self.ftPage.pubsub.send_all(Message(message, self.name))
+        self.ftPage.pubsub.send_all(Message(message, self.name, sentBySelf=True))
         
     def _get_chat_view(self) -> ft.View:
 
@@ -294,7 +341,7 @@ class Chat:
         self.name = name
         self.address = address
         self.port = port
-        self.serialCtl.start(port, 115200, address)
+        self.serialCtl.start(port, 9600, address)
         self.ftPage.go("/no_route")
 
         self.recThread = Thread(target=self._run_receive)
