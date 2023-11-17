@@ -400,6 +400,10 @@ class Chat:
         self.port = port
         self.serialCtl.start(port, 9600, address)
         self.ftPage.go("/no_route")
+        
+        # self.ftPage.views.clear()
+        # self.ftPage.views.append(self._get_chat_view())
+        # self.ftPage.update()
 
         self.recThread = Thread(target=self._run_receive)
         self.recThread.start()
