@@ -30,7 +30,7 @@ def decode(data: str):
     # m[R,type,message]
     # s[mode,type,src->dest,size(txsize),seq,cw,cwsize,dispatch,time]
 
-    pattern = r'^[pacms]\[([^\]]*)\]$'
+    pattern = r'^([pacms])\[([^\]]*)\]$'
     match = re.match(pattern, data)
-    return match.group(0), match.group(1).split(",")
+    return match.group(1), match.group(2).split(",")
 

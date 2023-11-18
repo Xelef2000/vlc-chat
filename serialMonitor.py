@@ -63,8 +63,8 @@ class Chat:
     def _run_receive(self) -> None:
         while True:
             message = self.serialCtl.receive()
-            if(message != ""):
-                self.ftPage.pubsub.send_all(Message(message.rstrip()))
+            if(message is not None):
+                self.ftPage.pubsub.send_all(Message(f"{message[0]}[{','.join(message[1])}]"))
             sleep(0.1)
 
     def _get_setup_view(self) -> ft.View:
@@ -95,6 +95,7 @@ class Chat:
                                                    ft.dropdown.Option("1000000"),
                                                    ft.dropdown.Option("2000000")], 
                                                    value=ft.dropdown.Option("9600"))
+        baudRate.value = "115200"
         
         return ft.View(
             "/",
@@ -252,7 +253,7 @@ class Chat:
         self.ftPage.banner.open = False
         self.ftPage.update()
 
-    def submitSetup(self, baudRate : str, port : str ) -> None:
+    def submitSetup(self, port : str, baudRate : str) -> None:
        
 
 
@@ -263,7 +264,7 @@ class Chat:
 
         self.displaySetup = False
         self.port = port
-        self.serialCtl.start(baudRate,port)
+        self.serialCtl.start(port, baudRate)
         self.ftPage.go("/no_route")
         
         # self.ftPage.views.clear()

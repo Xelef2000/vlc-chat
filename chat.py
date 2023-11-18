@@ -6,6 +6,7 @@ from faker import Faker
 from threading import Thread
 
 from serialController import SerialController
+import scp
 
 class Message:
     message = ""
@@ -141,7 +142,7 @@ class Chat:
         )
     
     def send_message(self, message : str) -> None:
-        self.serialCtl.send(f"{self.name}:{message}")
+        self.serialCtl.send(scp.message(f"{self.name}:{message}", "FF"))
         self.ftPage.pubsub.send_all(Message(message, self.name, sentBySelf=True))
         
     def _get_chat_view(self) -> ft.View:
@@ -302,7 +303,7 @@ class Chat:
         self.name = name
         self.address = address
         self.port = port
-        self.serialCtl.start(port, 9600, address)
+        self.serialCtl.start(port, 115200, address)
         self.ftPage.go("/no_route")
         
         # self.ftPage.views.clear()
