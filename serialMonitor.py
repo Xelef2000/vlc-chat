@@ -16,7 +16,6 @@ class SerialController:
 
     serialPort = "COM3"
     baudRate = 115200
-    address = "AB"
     running = False
     ser = None
 
@@ -33,8 +32,6 @@ class SerialController:
         return [p.device for p in ports]
 
     def _setup_device(self) -> None:
-        self.ser.write(str.encode(f"a[{self.address}]\n"))
-        sleep(0.1)
         self.ser.write(str.encode("c[1,0,5]\n"))
         sleep(0.1)
         self.ser.write(str.encode(f"c[0,1,30]\n"))
@@ -42,10 +39,9 @@ class SerialController:
 
 
 
-    def start(self, serialPort: str, baudRate: int, address: str) -> None:
+    def start(self, serialPort: str, baudRate: int,) -> None:
         self.serialPort = serialPort
         self.baudRate = baudRate
-        self.address = address
         self.running = True
 
         self.ser = serial.Serial(port=self.serialPort, baudrate=self.baudRate, timeout=0.1)
@@ -68,7 +64,7 @@ class SerialController:
 
     def _send_send_to_serial(self, data: str) -> None:
         print(f"Sending {data}")
-        self.ser.write(f"m[{data}\0,FF]\n".encode())
+        self.ser.write(data.encode())
 
     def _receive_from_serial(self) -> str:
         # randomly return a message 
@@ -85,7 +81,7 @@ class SerialController:
 
     def _run(self) -> None:
         sleep(2)
-        self._setup_device()
+        # self._setup_device()
         while self.running:
             try:
                 data = self.send_queue.get(timeout=0.1)
@@ -107,23 +103,17 @@ class SerialController:
 class Message:
     message = ""
     time = ""
-    srcName = ""
-    sentBySelf = False
-    sentBySystem = False
 
-    def __init__(self, message: str, srcName: str, sentBySelf: bool = False, sentBySystem: bool = False) -> None:
+
+    def __init__(self, message: str, ) -> None:
         self.message = message
-        self.srcName = srcName
         self.time = datetime.datetime.now().strftime("%H:%M")
-        self.sentBySelf = sentBySelf
-        self.sentBySystem = sentBySystem
+
     
 class Chat:
     ftPage = None
     displaySetup = True
     serialCtl = None
-    name = ""
-    address = ""
     port = ""
 
     massagesView = None
@@ -154,40 +144,10 @@ class Chat:
         return row
 
         
-    def _get_msg_self_sent(self, message : Message) -> ft.Row:
-        row = ft.Row([ft.Text(message.message, color=ft.colors.BLACK87),ft.Text(f": {self.name}", color=ft.colors.BLACK87), ft.Text(message.time)], spacing=10, alignment=ft.MainAxisAlignment.END)
-
-        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.ORANGE_400, shadow=ft.BoxShadow(
-            spread_radius=1,
-            blur_radius=0,
-            color=ft.colors.BLUE_GREY_300,
-            offset=ft.Offset(0, 0),
-            blur_style=ft.ShadowBlurStyle.OUTER,
-        ))
-
-        return container 
-    
-    def _get_msg_other_sent(self, message : Message) -> ft.Row:
-        
-        row = ft.Row([ft.Text(message.time), ft.Text(f"{message.srcName}:", color=ft.colors.BLACK87), ft.Text(message.message,  color=ft.colors.BLACK87) ], spacing=10)
-        container = ft.Container(content=row, padding=10, border_radius=5, bgcolor=ft.colors.BLUE_200, shadow=ft.BoxShadow(
-            spread_radius=1,
-            blur_radius=0,
-            color=ft.colors.BLUE_GREY_300,
-            offset=ft.Offset(0, 0),
-            blur_style=ft.ShadowBlurStyle.OUTER,
-        ))
-
-        return container
 
 
     def get_message_element(self, message : Message) -> ft.Row:
-        if(message.sentBySelf):
-            return self._get_msg_self_sent(message)
-        elif (message.sentBySystem):
-            return self._get_msg_system(message)
-        else:
-            return self._get_msg_other_sent(message)
+        return self._get_msg_system(message)
 
     def add_message(self, message : Message) -> None:
         self.massagesView.controls.append(self.get_message_element(message))
@@ -197,16 +157,7 @@ class Chat:
         while True:
             message = self.serialCtl.receive()
             if(message != ""):
-
-                split = message.split(":")
-
-                if(len(split) < 2):
-                    self.ftPage.pubsub.send_all(Message(message.rstrip(), "sys", sentBySelf=False, sentBySystem=True))
-                
-                else:
-                    name = split[0]
-                    text = ":".join(message.split(":")[1:])
-                    self.ftPage.pubsub.send_all(Message(text.rstrip(), name, sentBySelf=False))
+                self.ftPage.pubsub.send_all(Message(message.rstrip()))
             sleep(0.1)
 
     def _get_setup_view(self) -> ft.View:
@@ -219,8 +170,24 @@ class Chat:
             self.close_banner(None)
 
         portDD = ft.Dropdown( width=300,options=portList, value=portList[0])
-        addressTF = ft.TextField(hint_text="AA", width=300)
-        nameTF = ft.TextField(hint_text="", width=300)
+        baudRate = ft.Dropdown( width=300,options=[ft.dropdown.Option("300"),
+                                                   ft.dropdown.Option("600"), 
+                                                   ft.dropdown.Option("750"),
+                                                   ft.dropdown.Option("1200"),
+                                                   ft.dropdown.Option("2400"), 
+                                                   ft.dropdown.Option("4800"),
+                                                   ft.dropdown.Option("9600"),
+                                                   ft.dropdown.Option("19200"), 
+                                                   ft.dropdown.Option("31250"),
+                                                   ft.dropdown.Option("38400"),
+                                                   ft.dropdown.Option("57600"), 
+                                                   ft.dropdown.Option("115200"),
+                                                   ft.dropdown.Option("230400"),
+                                                   ft.dropdown.Option("250000"), 
+                                                   ft.dropdown.Option("500000"),
+                                                   ft.dropdown.Option("1000000"),
+                                                   ft.dropdown.Option("2000000")], 
+                                                   value=ft.dropdown.Option("9600"))
         
         return ft.View(
             "/",
@@ -228,17 +195,15 @@ class Chat:
                 ft.Text("Select Port"),
                 ft.AppBar(title=ft.Text("Setup"), bgcolor=ft.colors.SURFACE_VARIANT),
                 portDD,
-                ft.Text("Select Address"),
-                addressTF,
-                ft.Text("Name"),
-                nameTF,
-                ft.ElevatedButton("Submit", on_click=lambda e : self.submitSetup(addressTF.value, portDD.value, nameTF.value)),
+                ft.Text("Baud Rate"),
+                baudRate,
+                ft.ElevatedButton("Start", on_click=lambda e : self.submitSetup(portDD.value, baudRate.value)),
             ],
         )
     
     def send_message(self, message : str) -> None:
-        self.serialCtl.send(f"{self.name}:{message}")
-        self.ftPage.pubsub.send_all(Message(message, self.name, sentBySelf=True))
+        self.serialCtl.send(message + "\n")
+        self.ftPage.pubsub.send_all(Message(message))
         
     def _get_chat_view(self) -> ft.View:
 
@@ -298,7 +263,7 @@ class Chat:
     def ui(self, page: ft.Page) -> None:
         self.ftPage = page
         page.theme_mode = ft.ThemeMode.DARK
-        page.title = "VLC Chat"
+        page.title = "Serial Monitor"
         page.horizontal_alignment = "stretch"
         page.pubsub.subscribe(self.add_message)
         self.ftPage.banner = ft.Banner( content=ft.Text("Loading...",color=ft.colors.BLACK87),actions=[ft.TextButton("Reload", on_click=self._reload_setup)])
@@ -380,14 +345,9 @@ class Chat:
         self.ftPage.banner.open = False
         self.ftPage.update()
 
-    def submitSetup(self, address : str, port : str, name: str ) -> None:
-        if(len(name) == 0):
-            name = "Anonymous"
-        
-        if(address == "" or int(address, 16) <= 0 or int(address, 16) > 254):
-            self.show_invalid_address_banner()
-            return
-        
+    def submitSetup(self, baudRate : str, port : str ) -> None:
+       
+
 
         if(port == "" or port is None or port == "No Ports Found"):
             self.show_invalid_port_banner()
@@ -395,10 +355,8 @@ class Chat:
 
 
         self.displaySetup = False
-        self.name = name
-        self.address = address
         self.port = port
-        self.serialCtl.start(port, 9600, address)
+        self.serialCtl.start(baudRate,port)
         self.ftPage.go("/no_route")
         
         # self.ftPage.views.clear()
