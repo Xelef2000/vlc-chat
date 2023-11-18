@@ -5,6 +5,8 @@ from queue import Queue
 from queue import Empty
 from time import sleep
 
+import scp
+
 
 class SerialController:
     serialPort = "COM3"
@@ -25,11 +27,11 @@ class SerialController:
 
     def _setup_device(self) -> None:
         if self.address:
-            self.ser.write(str.encode(f"a[{self.address}]\n"))
+            self._send_to_serial(scp.set_address(self.address))
             sleep(0.1)
-        self.ser.write(str.encode("c[1,0,5]\n"))
+        self._send_to_serial(scp.configure(1,0,5))
         sleep(0.1)
-        self.ser.write(str.encode(f"c[0,1,30]\n"))
+        self._send_to_serial(scp.configure(0,1,30))
         sleep(0.1)
 
     def start(self, serialPort: str, baudRate: int, address: str = None) -> None:
@@ -49,21 +51,22 @@ class SerialController:
 
     def send(self, data: str) -> None:
         self.send_queue.put(data)
+
     def receive(self) -> str:
         try:
             return self.receive_queue.get(timeout=0.1)
         except Empty:
-            return ""
+            return
 
     def _send_to_serial(self, data: str) -> None:
         print(f"Sending {data}")
-        self.ser.write(f"m[{data}\0,FF]\n".encode())
+        self.ser.write(str.encode(data))
 
     def _receive_from_serial(self) -> str:
         data = self.ser.readline().decode()
-        if(data != ""):
+        if(data != "" and data != "\n"):
             print(f"Received {data}")
-        return data
+            return scp.decode(data)
 
     def _run(self) -> None:
         sleep(2)

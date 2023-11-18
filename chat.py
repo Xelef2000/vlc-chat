@@ -99,17 +99,18 @@ class Chat:
     def _run_receive(self) -> None:
         while True:
             message = self.serialCtl.receive()
-            if(message != ""):
+            if(message is not None and message[0] == "m" and message[1][0] == "R" and message[1][1] == "D"):
 
-                split = message.split(":")
+                    split = message[1][2].split(":")
 
-                if(len(split) < 2):
-                    self.ftPage.pubsub.send_all(Message(message.rstrip(), "sys", sentBySelf=False, sentBySystem=True))
-                
-                else:
-                    name = split[0]
-                    text = ":".join(message.split(":")[1:])
-                    self.ftPage.pubsub.send_all(Message(text.rstrip(), name, sentBySelf=False))
+                    if(len(split) < 2):
+                        raise SyntaxError("msg does not follow this applications syntax")
+                        #self.ftPage.pubsub.send_all(Message(message.rstrip(), "sys", sentBySelf=False, sentBySystem=True))
+
+                    else:
+                        name = split[0]
+                        text = ":".join(message.split(":")[1:])
+                        self.ftPage.pubsub.send_all(Message(text.rstrip(), name, sentBySelf=False))
             sleep(0.1)
 
     def _get_setup_view(self) -> ft.View:
