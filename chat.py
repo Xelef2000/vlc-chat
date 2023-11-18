@@ -3,6 +3,7 @@ from random import random
 import flet as ft
 import datetime
 from faker import Faker
+from threading import Thread
 
 from serialController import SerialController
 

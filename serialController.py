@@ -3,6 +3,7 @@ import serial
 from threading import Thread
 from queue import Queue
 from queue import Empty
+from time import sleep
 
 
 class SerialController:
