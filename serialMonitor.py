@@ -17,7 +17,7 @@ class Message:
         self.time = datetime.datetime.now().strftime("%H:%M")
 
     
-class Chat:
+class Monitor:
     ftPage = None
     displaySetup = True
     serialCtl = None
@@ -279,7 +279,7 @@ class Chat:
 
 def main():
     print("Starting")
-    chat = Chat()
+    chat = Monitor()
     ft.app(target=chat.ui)
 
 
