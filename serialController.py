@@ -11,7 +11,6 @@ import scp
 class SerialController:
     serialPort = "COM3"
     baudRate = 115200
-    address = "AB"
     running = False
     ser = None
 
@@ -25,19 +24,11 @@ class SerialController:
             print("{}: {} [{}]".format(port, desc, hwid))
         return [p.device for p in ports]
 
-    def _setup_device(self) -> None:
-        if self.address:
-            self._send_to_serial(scp.set_address(self.address))
-            sleep(0.1)
-        self._send_to_serial(scp.configure(1,0,5))
-        sleep(0.1)
-        self._send_to_serial(scp.configure(0,1,30))
-        sleep(0.1)
 
-    def start(self, serialPort: str, baudRate: int, address: str = None) -> None:
+
+    def start(self, serialPort: str, baudRate: int) -> None:
         self.serialPort = serialPort
         self.baudRate = baudRate
-        self.address = address
         self.running = True
 
         self.ser = serial.Serial(port=self.serialPort, baudrate=self.baudRate, timeout=0.1)
@@ -66,11 +57,11 @@ class SerialController:
         data = self.ser.readline().decode()
         if(data != "" and data != "\n"):
             print(f"Received {data}", end="")
-            return scp.decode(data.rstrip())
-
+            return data.rstrip()
+        
     def _run(self) -> None:
         sleep(2)
-        self._setup_device()
+        # self._setup_device()
         while self.running:
             try:
                 data = self.send_queue.get(timeout=0.1)
