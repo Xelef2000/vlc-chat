@@ -12,8 +12,11 @@ import scp
 def create_payload(byte_size: int) -> str:
     return ''.join(random.choice(string.ascii_letters + string.digits) for _ in range(byte_size))
 
-def run_benchmark(serialCtl: SerialController, distance: float, payload_size: int, dest: str) -> None:
+def run_benchmark(serialCtl: SerialController, port: str, distance: float, payload_size: int, dest: str) -> None:
     print(f"Running benchmark with payload size: {payload_size}")
+
+    # Make new Serial to ensure empty read the lazy way
+    serialCtl.ser = serial.Serial(port=port, baudrate=115200, timeout=0.1)
 
     msg_done = []
     msg_ack = []
@@ -40,6 +43,8 @@ def run_benchmark(serialCtl: SerialController, distance: float, payload_size: in
         thrp = payload_size/time_between_ACK
         avg_thrp = np.mean(thrp)
         thrp_std = np.std(thrp, ddof=1)
+
+    serialCtl.ser.close()
 
     # Send saturation traffic:
     # serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
@@ -94,6 +99,8 @@ def main():
     # enable Forward Error Correction
     # serialCtl._send_to_serial(scp.configure(0, 1, 1))
 
+    serialCtl.ser.close()
+
     if not Tx:
         sys.exit()
 
@@ -106,7 +113,7 @@ def main():
             print("Exiting...")
             sys.exit()
         for payload_size in [1, 100, 180]:
-            run_benchmark(serialCtl, dist, payload_size, Rx_addr)
+            run_benchmark(serialCtl, port, dist, payload_size, Rx_addr)
             time.sleep(5)
 
 
