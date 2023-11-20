@@ -308,7 +308,7 @@ class Chat:
         self.name = name
         self.address = address
         self.port = port
-        self.serialCtl.start(port, 115200, address)
+        self.serialCtl.start(port, 115200)
         self.ftPage.go("/no_route")
         
         # self.ftPage.views.clear()
