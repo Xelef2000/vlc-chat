@@ -64,7 +64,7 @@ class Monitor:
         while True:
             message = self.serialCtl.receive()
             if(message is not None):
-                self.ftPage.pubsub.send_all(Message(f"{message[0]}[{','.join(message[1])}]"))
+                self.ftPage.pubsub.send_all(Message(message))
             sleep(0.1)
 
     def _get_setup_view(self) -> ft.View:
