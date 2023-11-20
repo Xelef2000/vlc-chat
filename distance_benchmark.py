@@ -2,7 +2,8 @@ import sys
 import random
 import string
 import serial
-# import pandas as pd
+import time
+import numpy as np
 
 from serialController import SerialController
 import scp
@@ -14,7 +15,31 @@ def create_payload(byte_size: int) -> str:
 def run_benchmark(serialCtl: SerialController, distance: float, payload_size: int, dest: str) -> None:
     print(f"Running benchmark with payload size: {payload_size}")
 
+    msg_done = []
+    msg_ack = []
+
     # Let it run for a fixed time (20s?)
+    run_time = 20  # s
+
+    start_time = time.time()
+    serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
+    while time.time() - start_time < run_time:
+        data = serialCtl._receive_from_serial()
+        if data is not None:
+            if data[0] == 'm' and data[1][0] == 'D':
+                msg_done.append(time.time() - start_time)
+                time.sleep(0.01)
+                serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
+            if data[0] == 'm' and data[1][0] == 'R' and data[1][1] == 'A':
+                msg_ack.append(time.time() - start_time)
+
+    if len(msg_ack) != 0:
+        time_between_ACK = np.array(msg_ack[:1] + [j - i for i, j in zip(msg_ack[:-1], msg_ack[1:])])
+        avg_delay = np.mean(time_between_ACK)
+        delay_std = np.std(time_between_ACK, ddof=1)
+        thrp = payload_size/time_between_ACK
+        avg_thrp = np.mean(thrp)
+        thrp_std = np.std(thrp, ddof=1)
 
     # Send saturation traffic:
     # serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
@@ -27,8 +52,8 @@ def run_benchmark(serialCtl: SerialController, distance: float, payload_size: in
     #   delay: time_between_ACK
 
     # provide also statistical information
-    #   Create a plot with twin ax for thrp and delay, plot moving average and confidence interval
-    #   Expected: Std dev is lower with lower delay bc more data
+    #   Create a plot with twin ax for thrp and delay, plot moving average and confidence interval (maybe there is a better way)
+    #   Expected: Std dev is lower with lower delay bc more data (only true for std dev of avg)
 
 
 def main():
@@ -72,6 +97,7 @@ def main():
     if not Tx:
         sys.exit()
 
+    time.sleep(2)
     print("\nStaring benchmarks")
     while True:
         try:
@@ -81,6 +107,7 @@ def main():
             sys.exit()
         for payload_size in [1, 100, 180]:
             run_benchmark(serialCtl, dist, payload_size, Rx_addr)
+            time.sleep(5)
 
 
 if __name__ == "__main__":
