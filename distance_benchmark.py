@@ -15,9 +15,6 @@ def create_payload(byte_size: int) -> str:
 def run_benchmark(serialCtl: SerialController, port: str, distance: float, payload_size: int, dest: str) -> None:
     print(f"Running benchmark with payload size: {payload_size}")
 
-    # Make new Serial to ensure empty read the lazy way
-    serialCtl.ser = serial.Serial(port=port, baudrate=115200, timeout=0.1)
-
     msg_done = []
     msg_ack = []
 
@@ -27,7 +24,7 @@ def run_benchmark(serialCtl: SerialController, port: str, distance: float, paylo
     start_time = time.time()
     serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
     while time.time() - start_time < run_time:
-        data = serialCtl._receive_from_serial()
+        data = scp.decode(serialCtl._receive_from_serial())
         if data is not None:
             if data[0] == 'm' and data[1][0] == 'D':
                 msg_done.append(time.time() - start_time)
@@ -43,8 +40,7 @@ def run_benchmark(serialCtl: SerialController, port: str, distance: float, paylo
         thrp = payload_size/time_between_ACK
         avg_thrp = np.mean(thrp)
         thrp_std = np.std(thrp, ddof=1)
-
-    serialCtl.ser.close()
+        return avg_delay, delay_std, avg_thrp, thrp_std, len(msg_ack)
 
     # Send saturation traffic:
     # serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
@@ -99,12 +95,12 @@ def main():
     # enable Forward Error Correction
     # serialCtl._send_to_serial(scp.configure(0, 1, 1))
 
-    serialCtl.ser.close()
+    #serialCtl.ser.close()
 
     if not Tx:
         sys.exit()
 
-    time.sleep(2)
+    time.sleep(5)
     print("\nStaring benchmarks")
     while True:
         try:
@@ -113,7 +109,12 @@ def main():
             print("Exiting...")
             sys.exit()
         for payload_size in [1, 100, 180]:
-            run_benchmark(serialCtl, port, dist, payload_size, Rx_addr)
+            results = run_benchmark(serialCtl, port, dist, payload_size, Rx_addr)
+            print(f"D: {dist}, S: {payload_size}\n{results}")
+
+            not_empty = True
+            while not_empty:
+                not_empty = serialCtl._receive_from_serial()
             time.sleep(5)
 
 
