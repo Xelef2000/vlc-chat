@@ -287,8 +287,8 @@ class Chat:
 
     def setup_vlc_device(self) -> None:
         self.serialCtl.send(scp.configure(1,0,5))
-        self.serialCtl.send(scp.message(scp.configure(0,1,30)))
-        self.serialCtl.send(scp.message(scp.set_address(self.address)))
+        self.serialCtl.send(scp.configure(0,1,30))
+        self.serialCtl.send(scp.set_address(self.address))
 
     def submitSetup(self, address : str, port : str, name: str ) -> None:
         if(len(name) == 0):

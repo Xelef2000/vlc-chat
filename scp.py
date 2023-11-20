@@ -21,6 +21,8 @@ def message(msg: str, dest: str) -> str:
     return f"m[{msg}\0,{dest}]\n"
 
 def decode(data: str):
+    if not data:
+        return
     # Possible formats
     # p[version]
     # a[addr]
