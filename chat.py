@@ -110,7 +110,7 @@ class Chat:
 
                     else:
                         name = split[0]
-                        text = ":".join(message.split(":")[1:])
+                        text = ":".join(split[1:])
                         self.ftPage.pubsub.send_all(Message(text.rstrip(), name, sentBySelf=False))
             sleep(0.1)
 
