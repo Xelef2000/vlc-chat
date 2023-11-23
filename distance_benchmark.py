@@ -4,6 +4,7 @@ import string
 import serial
 import time
 import numpy as np
+import pandas as pd
 
 from serialController import SerialController
 import scp
@@ -19,7 +20,7 @@ def run_benchmark(serialCtl: SerialController, port: str, distance: float, paylo
     msg_ack = []
 
     # Let it run for a fixed time (20s?)
-    run_time = 20  # s
+    run_time = 20 # s
 
     start_time = time.time()
     serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
@@ -33,14 +34,14 @@ def run_benchmark(serialCtl: SerialController, port: str, distance: float, paylo
             if data[0] == 'm' and data[1][0] == 'R' and data[1][1] == 'A':
                 msg_ack.append(time.time() - start_time)
 
-    if len(msg_ack) != 0:
-        time_between_ACK = np.array(msg_ack[:1] + [j - i for i, j in zip(msg_ack[:-1], msg_ack[1:])])
+    if len(msg_ack) > 1:
+        time_between_ACK = np.array([j - i for i, j in zip(msg_ack[:-1], msg_ack[1:])])
         avg_delay = np.mean(time_between_ACK)
         delay_std = np.std(time_between_ACK, ddof=1)
         thrp = payload_size/time_between_ACK
         avg_thrp = np.mean(thrp)
         thrp_std = np.std(thrp, ddof=1)
-        return avg_delay, delay_std, avg_thrp, thrp_std, len(msg_ack)
+        return avg_delay, delay_std, avg_thrp, thrp_std, len(time_between_ACK)
 
     # Send saturation traffic:
     # serialCtl._send_to_serial(scp.message(create_payload(payload_size), dest))
@@ -95,28 +96,30 @@ def main():
     # enable Forward Error Correction
     # serialCtl._send_to_serial(scp.configure(0, 1, 1))
 
-    #serialCtl.ser.close()
-
     if not Tx:
         sys.exit()
 
-    time.sleep(5)
+    time.sleep(2)
     print("\nStaring benchmarks")
+    columns = ['dist', 'payload_size', 'avg_delay', 'delay_std', 'avg_thrp', 'thrp_std', 'nr_packets']
+    df_results = pd.DataFrame(columns=columns)
     while True:
         try:
             dist = float(input("New distance: "))
         except ValueError:
             print("Exiting...")
+            df_results.to_csv("results.csv")
             sys.exit()
         for payload_size in [1, 100, 180]:
             results = run_benchmark(serialCtl, port, dist, payload_size, Rx_addr)
             print(f"D: {dist}, S: {payload_size}\n{results}")
+            df_results.loc[len(df_results)] = [dist, payload_size, *results]
 
             not_empty = True
             while not_empty:
                 not_empty = serialCtl._receive_from_serial()
             time.sleep(5)
-
+        print(df_results)
 
 if __name__ == "__main__":
     main()

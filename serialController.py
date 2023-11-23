@@ -50,13 +50,13 @@ class SerialController:
             return
 
     def _send_to_serial(self, data: str) -> None:
-        print(f"Sending {data}", end="")
+        #print(f"Sending {data}", end="")
         self.ser.write(str.encode(data))
 
     def _receive_from_serial(self) -> str:
         data = self.ser.readline().decode()
         if(data != "" and data != "\n"):
-            print(f"Received {data}", end="")
+            #print(f"Received {data}", end="")
             return data.rstrip()
         
     def _run(self) -> None:
