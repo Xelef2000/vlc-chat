@@ -141,7 +141,7 @@ class Monitor:
         view = ft.View(
             "/",
             [
-                ft.AppBar(title=ft.Text("Chat"), bgcolor=ft.colors.SURFACE_VARIANT),
+                ft.AppBar(title=ft.Text("Monitor"), bgcolor=ft.colors.SURFACE_VARIANT),
                 ft.Container(
                     content=self.massagesView,
                     border=ft.border.all(1, ft.colors.OUTLINE),
